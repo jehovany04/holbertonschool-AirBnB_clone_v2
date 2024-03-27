@@ -9,44 +9,56 @@ class FileStorage:
     __objects = {}
 
     def all(self, cls=None):
-        """
-        Returns a dictionary of models currently in storage.
-        If cls is provided, returns a dictionary of objects of type cls.
-        """
-        if cls is not None:
-            return {k: v for k, v in FileStorage.__objects.items()
-                    if isinstance(v, cls)}
-        return FileStorage.__objects
+        """Returns a dictionary of models currently in storage
+        or returns a list of objects of the specified class."""
+        if cls:
+            # key.split[0] partitions the key to only the name of the object.
+            return {key: obj for key, obj in FileStorage.__objects.items()
+                    if key.split('.')[0] == cls.__name__}
+        else:
+            return FileStorage.__objects
 
     def new(self, obj):
         """Adds new object to storage dictionary"""
-        key = "{}.{}".format(obj.__class__.__name__, obj.id)
-        FileStorage.__objects[key] = obj
+        self.all().update({obj.to_dict()['__class__'] + '.' + obj.id: obj})
 
     def save(self):
         """Saves storage dictionary to file"""
         with open(FileStorage.__file_path, 'w') as f:
-            temp = {k: v.to_dict() for k, v in FileStorage.__objects.items()}
+            temp = {}
+            temp.update(FileStorage.__objects)
+            for key, val in temp.items():
+                temp[key] = val.to_dict()
             json.dump(temp, f)
 
-    def delete(self, obj=None):
-        """
-        Deletes obj from __objects if it’s inside.
-        If obj is equal to None, the method should not do anything.
-        """
-        if obj:
-            key = "{}.{}".format(obj.__class__.__name__, obj.id)
-            FileStorage.__objects.pop(key, None)
-            
     def reload(self):
         """Loads storage dictionary from file"""
+        from models.base_model import BaseModel
+        from models.user import User
+        from models.place import Place
+        from models.state import State
+        from models.city import City
+        from models.amenity import Amenity
+        from models.review import Review
+
+        classes = {
+                    'BaseModel': BaseModel, 'User': User, 'Place': Place,
+                    'State': State, 'City': City, 'Amenity': Amenity,
+                    'Review': Review
+                  }
         try:
+            temp = {}
             with open(FileStorage.__file_path, 'r') as f:
                 temp = json.load(f)
-                for k, v in temp.items():
-                    cls_name = v["__class__"]
-                    obj = globals()[cls_name](**v)
-                    FileStorage.__objects[k] = obj
+                for key, val in temp.items():
+                    self.all()[key] = classes[val['__class__']](**val)
         except FileNotFoundError:
             pass
 
+    def delete(self, obj=None):
+        """Deletes specified obj from __objects"""
+        if obj:
+            key = "{}.{}".format(type(obj).__name__, obj.id)
+            del FileStorage.__objects[key]
+        else:
+            return
