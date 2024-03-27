@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""This module defines a class to manage file storage for hbnb clone"""
+""This module defines a class to manage file storage for hbnb clone""
 import json
 
 
@@ -9,14 +9,15 @@ class FileStorage:
     __objects = {}
 
     def all(self, cls=None):
-        """Returns a dictionary of models currently in storage
-        or returns a list of objects of the specified class."""
-        if cls:
-            # key.split[0] partitions the key to only the name of the object.
-            return {key: obj for key, obj in FileStorage.__objects.items()
-                    if key.split('.')[0] == cls.__name__}
-        else:
+        """Returns a dictionary of models currently in storage"""
+        if cls is None:
             return FileStorage.__objects
+        else:
+            new_dict = {}
+            for key in FileStorage.__objects:
+                if FileStorage.__objects[key].__class__ == cls:
+                    new_dict[key] = FileStorage.__objects[key]
+            return new_dict
 
     def new(self, obj):
         """Adds new object to storage dictionary"""
@@ -29,7 +30,7 @@ class FileStorage:
             temp.update(FileStorage.__objects)
             for key, val in temp.items():
                 temp[key] = val.to_dict()
-            json.dump(temp, f)
+            json.dump(temp, f, indent=2)
 
     def reload(self):
         """Loads storage dictionary from file"""
@@ -42,10 +43,10 @@ class FileStorage:
         from models.review import Review
 
         classes = {
-                    'BaseModel': BaseModel, 'User': User, 'Place': Place,
-                    'State': State, 'City': City, 'Amenity': Amenity,
-                    'Review': Review
-                  }
+            'BaseModel': BaseModel, 'User': User, 'Place': Place,
+            'State': State, 'City': City, 'Amenity': Amenity,
+            'Review': Review
+        }
         try:
             temp = {}
             with open(FileStorage.__file_path, 'r') as f:
@@ -56,9 +57,11 @@ class FileStorage:
             pass
 
     def delete(self, obj=None):
-        """Deletes specified obj from __objects"""
+        """function that deletes an object"""
         if obj:
-            key = "{}.{}".format(type(obj).__name__, obj.id)
-            del FileStorage.__objects[key]
-        else:
-            return
+            del (FileStorage.__objects["{}.{}".format
+                                       (obj.__class__.__name__, obj.id)])
+
+    def close(self):
+        """ Function that call the reload method """
+        self.reload()
