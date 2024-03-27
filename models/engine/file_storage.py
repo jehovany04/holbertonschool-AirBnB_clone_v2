@@ -1,13 +1,6 @@
 #!/usr/bin/python3
 """This module defines a class to manage file storage for hbnb clone"""
 import json
-from models.base_model import BaseModel
-from models.user import User
-from models.place import Place
-from models.state import State
-from models.city import City
-from models.amenity import Amenity
-from models.review import Review
 
 
 class FileStorage:
@@ -21,21 +14,19 @@ class FileStorage:
         If cls is provided, returns a dictionary of objects of type cls.
         """
         if cls is not None:
-            return {key: obj for key, obj in FileStorage.__objects.items()
-                    if isinstance(obj, cls)}
+            return {k: v for k, v in FileStorage.__objects.items()
+                    if isinstance(v, cls)}
         return FileStorage.__objects
 
     def new(self, obj):
         """Adds new object to storage dictionary"""
-        self.all().update({obj.to_dict()['__class__'] + '.' + obj.id: obj})
+        key = "{}.{}".format(obj.__class__.__name__, obj.id)
+        FileStorage.__objects[key] = obj
 
     def save(self):
         """Saves storage dictionary to file"""
         with open(FileStorage.__file_path, 'w') as f:
-            temp = {}
-            temp.update(FileStorage.__objects)
-            for key, val in temp.items():
-                temp[key] = val.to_dict()
+            temp = {k: v.to_dict() for k, v in FileStorage.__objects.items()}
             json.dump(temp, f)
 
     def delete(self, obj=None):
@@ -43,33 +34,19 @@ class FileStorage:
         Deletes obj from __objects if it’s inside.
         If obj is equal to None, the method should not do anything.
         """
-        if obj is None:
-            return
-        # Create the key as it would be stored in __objects
-        obj_key = "{}.{}".format(obj.__class__.__name__, obj.id)
-        # Attempt to delete the object
-        if obj_key in FileStorage.__objects:
-            del FileStorage.__objects[obj_key]
-
+        if obj:
+            key = "{}.{}".format(obj.__class__.__name__, obj.id)
+            FileStorage.__objects.pop(key, None)
+            
     def reload(self):
         """Loads storage dictionary from file"""
-        from models.base_model import BaseModel
-        from models.user import User
-        from models.place import Place
-        from models.state import State
-        from models.city import City
-        from models.amenity import Amenity
-        from models.review import Review
-
-        classes = {
-            'BaseModel': BaseModel, 'User': User, 'Place': Place,
-            'State': State, 'City': City, 'Amenity': Amenity,
-            'Review': Review
-        }
         try:
             with open(FileStorage.__file_path, 'r') as f:
                 temp = json.load(f)
-                for key, val in temp.items():
-                    self.all()[key] = classes[val['__class__']](**val)
+                for k, v in temp.items():
+                    cls_name = v["__class__"]
+                    obj = globals()[cls_name](**v)
+                    FileStorage.__objects[k] = obj
         except FileNotFoundError:
             pass
+
