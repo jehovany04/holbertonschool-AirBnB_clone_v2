@@ -183,4 +183,16 @@ class HBNBCommand(cmd.Cmd):
 
         key = c_name + "." + c_id
         try:
+            if key not in storage.all():
+                raise KeyError()
+            print(storage.all()[key])
+        except KeyError:
+            print("** no instance found **")
+
+    def help_show(self):
+        """ Prints the help documentation for show """
+        print("Prints the string representation of an instance\n")
+
+if __name__ == '__main__':
+    HBNBCommand().cmdloop()
 
